@@ -4,13 +4,15 @@ use std::io::Error as IOError;
 use std::io::Write;
 use std::net::TcpStream;
 
-const PROTOCOL_VERSION_MAJOR: u8 = 0;
-const PROTOCOL_VERSION_MINOR: u8 = 5;
+// ---- Error code ----
 
 /// All errors net_send can throw
 pub enum WiiLoadFail {
+    /// Arguments String to send is too big
     ArgsTooLong,
+    /// Executable Binary is too big
     BinaryTooLong,
+    /// Network-related error while sending data to the Wii
     NetError(IOError),
 }
 
@@ -20,11 +22,17 @@ impl From<IOError> for WiiLoadFail {
     }
 }
 
+// ---- Network Comm Header ----
+
 struct NetworkPacketHeader {
     args_len: u16,
     buffer_size: u32,
     uncompressed_buffer_size: u32,
 }
+
+// Version number consts
+const PROTOCOL_VERSION_MAJOR: u8 = 0;
+const PROTOCOL_VERSION_MINOR: u8 = 5;
 
 impl NetworkPacketHeader {
     const fn as_u8_buf(&self) -> [u8; 16] {
@@ -53,6 +61,8 @@ impl NetworkPacketHeader {
         ]
     }
 }
+
+// ---- Main code ----
 
 /// Main function of this library that sends the binary to the Wii
 /// Compression refers to the compression level used. If None, the binary will be sent directly, bypassing any compressor. If Some(v), v should be between 0 and 10.
