@@ -1,8 +1,7 @@
-use miniz_oxide::deflate::compress_to_vec;
+use miniz_oxide::deflate::compress_to_vec_zlib;
 use std::convert::TryInto;
 use std::io::Error as IOError;
 use std::io::Write;
-use std::net::TcpStream;
 
 // ---- Error code ----
 
@@ -66,8 +65,8 @@ impl NetworkPacketHeader {
 
 /// Main function of this library that sends the binary to the Wii
 /// Compression refers to the compression level used. If None, the binary will be sent directly, bypassing any compressor. If Some(v), v should be between 0 and 10.
-pub fn net_send(
-    connected_wii: &mut TcpStream,
+pub fn net_send<W: Write>(
+    wii_out: &mut W,
     executable_binary: &[u8],
     arguments: String,
     compression: Option<u8>,
@@ -88,7 +87,7 @@ pub fn net_send(
 
     // Hack to extend lifetime of compressed Vec
     let maybe_compressed = match compression {
-        Some(v) => compress_to_vec(executable_binary, v),
+        Some(v) => compress_to_vec_zlib(executable_binary, v),
         None => Vec::new(),
     };
 
@@ -119,9 +118,9 @@ pub fn net_send(
     };
 
     // ---- Send to Wii ----
-    connected_wii.write_all(&transfer_header.as_u8_buf())?;
-    connected_wii.write_all(processed_executable_binary)?;
-    connected_wii.write_all(arguments.as_bytes())?;
+    wii_out.write_all(&transfer_header.as_u8_buf())?;
+    wii_out.write_all(processed_executable_binary)?;
+    wii_out.write_all(arguments.as_bytes())?;
 
     Ok(())
 }
